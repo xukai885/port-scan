@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Port Scanner</title>
+    <link rel="icon" href="/favicon.gif" type="image/gif">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            transition: color 0.3s;
+        }
+
+        .tab:hover {
+            color: #007BFF;
+        }
+
+        .active {
+            border-bottom: 2px solid #007BFF;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .active-content {
+            display: block;
+        }
+
+        /* 共享的样式 */
+        h1, h2 {
+            color: #333;
+        }
+
+        input[type="text"], input[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #333;
+            box-sizing: border-box;
+        }
+
+        input[type="submit"] {
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+
+        .ip-list, .results-list ,.alert-list {
+            margin-top: 20px;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .port-list, .results-list ,.alert-list {
+            margin-top: 20px;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .ip-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 5px 0;
+        }
+
+        .alert-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 5px 0;
+        }
+        .port-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 5px 0;
+        }
+
+        .ip-item button {
+            background-color: #d9534f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+
+        .alert-item button {
+            background-color: #d9534f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+
+        .ip-item button:hover {
+            background-color: #c9302c;
+        }
+
+        .port-item button {
+            background-color: #d9534f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+
+        .port-item button:hover {
+            background-color: #c9302c;
+        }
+
+
+    </style>
+    <script>
+        // 切换选项卡
+        function showTab(tabName) {
+            const tabs = document.querySelectorAll('.tab-content');
+            const tabLinks = document.querySelectorAll('.tab');
+
+            tabs.forEach(tab => {
+                tab.classList.remove('active-content');
+            });
+
+            tabLinks.forEach(tabLink => {
+                tabLink.classList.remove('active');
+            });
+
+            document.getElementById(tabName).classList.add('active-content');
+            document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
+        }
+
+        // 页面加载时显示第一个选项卡
+        window.onload = function() {
+            showTab('scanner');
+        };
+
+        // 用于处理IP的函数
+        function fetchIPList() {
+            fetch('/api/get-ips')
+                .then(response => response.json())
+                .then(data => {
+                    const ipContainer = document.getElementById("ip-list");
+                    ipContainer.innerHTML = "";
+
+                    data.forEach(ip => {
+                        const ipItem = document.createElement("div");
+                        ipItem.className = "ip-item"; // 添加样式类
+                        ipItem.textContent = ip;
+
+                        // 删除按钮
+                        const deleteButton = document.createElement("button");
+                        deleteButton.textContent = "删除";
+                        deleteButton.onclick = function() {
+                            deleteIP(ip);
+                        };
+
+                        ipItem.appendChild(deleteButton);
+                        ipContainer.appendChild(ipItem);
+                    });
+                })
+                .catch(error => console.error('Error fetching IP list:', error));
+        }
+
+        function fetchPortList() {
+            fetch('/api/get-ports')
+                .then(response => response.json())
+                .then(data => {
+                    const portContainer = document.getElementById("port-list");
+                    portContainer.innerHTML = "";
+
+                    data.forEach(port => {
+                        const portItem = document.createElement("div");
+                        portItem.className = "port-item"; // 添加样式类
+                        portItem.textContent = port;
+
+                        // 删除按钮
+                        const deleteButton = document.createElement("button");
+                        deleteButton.textContent = "删除";
+                        deleteButton.onclick = function() {
+                            deletePort(port);
+                        };
+                        portItem.appendChild(deleteButton);
+
+                        portContainer.appendChild(portItem);
+                    });
+                })
+                .catch(error => console.error('Error fetching port list:', error));
+        }
+
+        // 用于处理IP的函数
+        function fetchAlertList() {
+            fetch('/api/get-alert')
+                .then(response => response.json())
+                .then(data => {
+                    const alertContainer = document.getElementById("alert-list");
+                    alertContainer.innerHTML = "";
+
+                    data.forEach( alert => {
+                        const alertItem = document.createElement("div");
+                        alertItem.className = "alert-item"; // 添加样式类
+                        alertItem.textContent = alert;
+
+                        // 删除按钮
+                        const deleteButton = document.createElement("button");
+                        deleteButton.textContent = "删除";
+                        deleteButton.onclick = function() {
+                            deleteAlert(alert);
+                        };
+
+                        alertItem.appendChild(deleteButton);
+                        alertContainer.appendChild(alertItem);
+                    });
+                })
+                .catch(error => console.error('Error fetching IP list:', error));
+        }
+
+        function addIP() {
+            const newIP = document.getElementById("new-ip").value;
+            if (newIP) {
+                fetch('/api/add-ip', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'ip=' + encodeURIComponent(newIP)
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            document.getElementById("new-ip").value = ""; // 清空输入框
+                            fetchIPList(); // 重新获取IP列表
+                        } else {
+                            alert('Failed to add IP');
+                        }
+                    })
+                    .catch(error => console.error('Error adding IP:', error));
+            }
+        }
+
+        function addPort() {
+            const newPort = document.getElementById("new-port").value;
+            if (newPort) {
+                fetch('/api/add-port', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'port=' + encodeURIComponent(newPort)
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            document.getElementById("new-port").value = ""; // 清空输入框
+                            fetchPortList(); // 重新获取Port列表
+                        } else {
+                            alert('Failed to add Port');
+                        }
+                    })
+                    .catch(error => console.error('Error adding Port:', error));
+            }
+        }
+
+        function addAlert() {
+            const iPort = document.getElementById("add-alert").value;
+            if (iPort) {
+                fetch('/api/add-alert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'iport=' + encodeURIComponent(iPort)
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            document.getElementById("add-alert").value = ""; // 清空输入框
+                            fetchAlertList()  // 重新获取
+                        } else {
+                            alert('添加告警屏蔽失败');
+                        }
+                    })
+                    .catch(error => console.error('添加告警屏蔽失败', error));
+            }
+        }
+
+        function deleteIP(ip) {
+            fetch('/api/delete-ip', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'ip=' + encodeURIComponent(ip)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        fetchIPList(); // 重新获取IP列表
+                    } else {
+                        alert('Failed to delete IP');
+                    }
+                })
+                .catch(error => console.error('Error deleting IP:', error));
+        }
+
+        function deletePort(port) {
+            fetch('/api/delete-port', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'port=' + encodeURIComponent(port)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        fetchPortList(); // 重新获取Port列表
+
+                    } else {
+                        alert('Failed to delete Port');
+                    }
+                })
+                .catch(error => console.error('Error deleting Port:', error));
+        }
+
+        function deleteAlert(iport) {
+            fetch('/api/delete-alert', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'iport=' + encodeURIComponent(iport)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        fetchAlertList(); // 重新获取Port列表
+
+                    } else {
+                        alert('Failed to delete iPort');
+                    }
+                })
+                .catch(error => console.error('Error deleting iPort:', error));
+        }
+
+        // 获取并显示扫描结果
+        function fetchResults() {
+            fetch('/api/results')
+                .then(response => response.json())
+                .then(data => {
+                    let resultsDiv = document.getElementById("results");
+                    resultsDiv.innerHTML = ""; // 清空之前的结果
+
+                    // 处理开放的端口信息
+                    if (data.open && Array.isArray(data.open.OpenHostPort) && data.open.OpenHostPort.length > 0) {
+                        let openHeader = document.createElement("h3");
+                        openHeader.textContent = "Open Ports:";
+                        resultsDiv.appendChild(openHeader);
+
+                        for (let i = 0; i < data.open.OpenHostPort.length; i++) {
+                            let p = document.createElement("p");
+                            p.textContent = `Open IP and Port: ${data.open.OpenHostPort[i]}`;
+                            resultsDiv.appendChild(p);
+                        }
+                    } else {
+                        let openHeader = document.createElement("h3");
+                        openHeader.textContent = "No Open Ports Found.";
+                        resultsDiv.appendChild(openHeader);
+                    }
+
+                    // 处理关闭的端口信息
+                    if (data.close && Array.isArray(data.close.CloseHostPort) && data.close.CloseHostPort.length > 0) {
+                        let closeHeader = document.createElement("h3");
+                        closeHeader.textContent = "Closed Ports:";
+                        resultsDiv.appendChild(closeHeader);
+
+                        for (let i = 0; i < data.close.CloseHostPort.length; i++) {
+                            let p = document.createElement("p");
+                            p.textContent = `Closed IP and Port: ${data.close.CloseHostPort[i]}`;
+                            resultsDiv.appendChild(p);
+                        }
+                    } else {
+                        let closeHeader = document.createElement("h3");
+                        closeHeader.textContent = "No Closed Ports Found.";
+                        resultsDiv.appendChild(closeHeader);
+                    }
+                })
+                .catch(error => console.error('Error fetching results:', error));
+        }
+        // 每隔5秒更新一次扫描结果
+        setInterval(fetchResults, 5000);
+        // 页面加载时获取IP列表
+        window.onload = function() {
+            fetchIPList();
+            fetchPortList();
+            fetchAlertList();
+        };
+    </script>
+</head>
+<body>
+
+<div class="container">
+    <h1>Port Scanner</h1>
+
+    <!-- 选项卡 -->
+    <div class="tabs">
+        <button class="tab active" onclick="showTab('scanner')">扫描器</button>
+        <button class="tab" onclick="showTab('results')">扫描结果</button>
+        <button class="tab" onclick="showTab('manage')">IP管理</button>
+    </div>
+
+    <!-- 扫描器 -->
+    <div id="scanner" class="tab-content active-content">
+        <form action="/scan" method="post">
+            <label for="ips">IP (eg: 10.1.1.2,10.1.1.2)</label>
+            <input type="text" id="ips" name="ips" required>
+
+            <label for="ports">Ports (eg: 80,443,89):</label>
+            <input type="text" id="ports" name="ports" required>
+
+            <label for="period">扫描间隔 (in seconds):</label>
+            <input type="text" id="period" name="period" required>
+
+            <input type="submit" value="Start Scanning">
+        </form>
+    </div>
+
+    <!-- 扫描结果 -->
+    <div id="results" class="tab-content">
+        <h2>扫描结果:</h2>
+        <div id="results" class="results-list"></div>
+        <button onclick="fetchResults()">获取最新结果</button>
+    </div>
+
+    <!-- IP port管理 -->
+    <div id="manage" class="tab-content">
+        <h2>IP Port管理</h2>
+        <div>
+            <label for="new-ip">新增IP:(eg:1.1.1.1,2.2.2.2)</label>
+            <input type="text" id="new-ip">
+            <button type="button" onclick="addIP()">添加IP</button>
+        </div>
+        <div>
+            <label for="new-port">新增Port:(eg:80,443)</label>
+            <input type="text" id="new-port">
+            <button type="button" onclick="addPort()">添加Port</button>
+        </div>
+        <div>
+            <label for="add-alert">屏蔽某条告警:(eg:10.1.1.1:80)</label>
+            <input type="text" id="add-alert">
+            <button type="button" onclick="addAlert()">添加屏蔽</button>
+        </div>
+        <h3>当前监听IP列表:</h3>
+        <div id="ip-list" class="ip-list"></div>
+        <h3>当前监听Port列表:</h3>
+        <div id="port-list" class="port-list"></div>
+        <h3>当前告警静默IP列表:</h3>
+        <div id="alert-list" class="alert-list"></div>
+
+    </div>
+</div>
+
+</body>
+</html>
